@@ -18,6 +18,7 @@ COGS = [
     "cogs.reuniones",          # F2 — agendamiento colectivo
     "cogs.notion",             # F3 — configuración y diagnóstico Notion
     "cogs.proyectos_publicos", # F4 — canal público de proyectos activos
+    "cogs.jam",                # F5 — tooling 4D4H Game Jam
 ]
 
 @bot.event

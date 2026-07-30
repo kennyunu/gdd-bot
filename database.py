@@ -73,7 +73,77 @@ async def init_db():
                 FOREIGN KEY (evento_id) REFERENCES eventos(id)
             );
 
-            -- IDs de páginas Notion (para poder actualizar páginas ya creadas)
+            -- ── FASE 5: 4D4H GAME JAM ────────────────────────────────────
+
+            -- Configuración de la jam activa
+            CREATE TABLE IF NOT EXISTS jam_config (
+                guild_id        TEXT PRIMARY KEY,
+                nombre          TEXT DEFAULT '4D4H Game Jam',
+                estado          TEXT DEFAULT 'inactiva', -- inactiva | registros | activa | votacion | cerrada
+                tema            TEXT,
+                inicio          TEXT,   -- ISO datetime arranque oficial
+                fin             TEXT,   -- ISO datetime cierre de entregas
+                canal_jam_id    TEXT,   -- canal principal de la jam
+                canal_entregas_id TEXT, -- canal donde se detectan links itch.io
+                canal_votos_id  TEXT,   -- canal de votaciones
+                itch_jam_url    TEXT    -- URL de la jam en itch.io
+            );
+
+            -- Diversificadores de la jam
+            CREATE TABLE IF NOT EXISTS jam_diversificadores (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id    TEXT NOT NULL,
+                nombre      TEXT NOT NULL,
+                descripcion TEXT
+            );
+
+            -- Equipos registrados
+            CREATE TABLE IF NOT EXISTS jam_equipos (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id    TEXT NOT NULL,
+                nombre      TEXT NOT NULL,
+                engine      TEXT,
+                lider_id    TEXT NOT NULL,  -- user_id del líder
+                creado_en   TEXT DEFAULT (datetime('now')),
+                juego_url   TEXT,           -- link itch.io de entrega
+                entregado_en TEXT           -- timestamp de entrega
+            );
+
+            -- Integrantes de cada equipo
+            CREATE TABLE IF NOT EXISTS jam_integrantes (
+                equipo_id   INTEGER NOT NULL,
+                user_id     TEXT NOT NULL,
+                PRIMARY KEY (equipo_id, user_id),
+                FOREIGN KEY (equipo_id) REFERENCES jam_equipos(id)
+            );
+
+            -- Recordatorios de jam ya enviados
+            CREATE TABLE IF NOT EXISTS jam_recordatorios (
+                guild_id    TEXT NOT NULL,
+                tipo        TEXT NOT NULL,  -- "24h" | "6h" | "1h"
+                PRIMARY KEY (guild_id, tipo)
+            );
+
+            -- Categorías de votación
+            CREATE TABLE IF NOT EXISTS jam_categorias (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id    TEXT NOT NULL,
+                nombre      TEXT NOT NULL,
+                descripcion TEXT,
+                estado      TEXT DEFAULT 'cerrada',  -- cerrada | abierta
+                mensaje_id  TEXT   -- ID del mensaje con botones de voto
+            );
+
+            -- Votos por categoría
+            CREATE TABLE IF NOT EXISTS jam_votos (
+                categoria_id    INTEGER NOT NULL,
+                user_id         TEXT NOT NULL,
+                equipo_id       INTEGER NOT NULL,
+                PRIMARY KEY (categoria_id, user_id),
+                FOREIGN KEY (categoria_id) REFERENCES jam_categorias(id),
+                FOREIGN KEY (equipo_id) REFERENCES jam_equipos(id)
+            );
+
             CREATE TABLE IF NOT EXISTS notion_pages (
                 entidad_tipo  TEXT NOT NULL,  -- "tarea" | "evento" | "flujo"
                 entidad_id    INTEGER NOT NULL,
