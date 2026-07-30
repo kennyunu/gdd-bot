@@ -72,6 +72,47 @@ async def init_db():
                 PRIMARY KEY (evento_id, user_id),
                 FOREIGN KEY (evento_id) REFERENCES eventos(id)
             );
+
+            -- IDs de páginas Notion (para poder actualizar páginas ya creadas)
+            CREATE TABLE IF NOT EXISTS notion_pages (
+                entidad_tipo  TEXT NOT NULL,  -- "tarea" | "evento" | "flujo"
+                entidad_id    INTEGER NOT NULL,
+                page_id       TEXT NOT NULL,
+                PRIMARY KEY (entidad_tipo, entidad_id)
+            );
+
+            -- REGISTRO de recordatorios ya enviados (evita duplicados)
+            CREATE TABLE IF NOT EXISTS recordatorios_enviados (
+                tarea_id    INTEGER NOT NULL,
+                tipo        TEXT NOT NULL,  -- "7d" | "3d" | "1d" | "vencida"
+                enviado_en  TEXT DEFAULT (datetime('now')),
+                PRIMARY KEY (tarea_id, tipo)
+            );
+
+            -- REUNIONES: sesiones de agendamiento colectivo
+            CREATE TABLE IF NOT EXISTS reuniones (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                titulo          TEXT NOT NULL,
+                descripcion     TEXT,
+                duracion_min    INTEGER DEFAULT 60,
+                creado_por      TEXT NOT NULL,
+                canal_id        TEXT NOT NULL,
+                mensaje_id      TEXT,           -- ID del mensaje con los botones
+                estado          TEXT DEFAULT 'abierta',  -- abierta | cerrada | confirmada
+                fecha_elegida   TEXT,           -- ISO datetime, una vez confirmada
+                guild_id        TEXT NOT NULL,
+                creado_en       TEXT DEFAULT (datetime('now'))
+            );
+
+            -- DISPONIBILIDAD: respuestas de cada miembro a una reunión
+            CREATE TABLE IF NOT EXISTS disponibilidad (
+                reunion_id  INTEGER NOT NULL,
+                user_id     TEXT NOT NULL,
+                slot        TEXT NOT NULL,  -- ISO datetime del slot propuesto
+                respuesta   TEXT NOT NULL,  -- "puede" | "no_puede" | "tal_vez"
+                PRIMARY KEY (reunion_id, user_id, slot),
+                FOREIGN KEY (reunion_id) REFERENCES reuniones(id)
+            );
         """)
         await db.commit()
     print(f"🗄️  Base de datos inicializada en {DB_PATH}")

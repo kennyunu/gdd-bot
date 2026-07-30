@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta
 from database import get_db
+import notion_sync
 
 
 class RSVPView(discord.ui.View):
@@ -101,6 +102,22 @@ class Eventos(commands.Cog):
             )
             evento_id = cur.lastrowid
             await db.commit()
+
+        # ── Sync a Notion ──
+        page_id = await notion_sync.crear_evento_notion(
+            evento_id=evento_id,
+            nombre=nombre,
+            fecha=fecha_dt.isoformat(),
+            lugar=lugar,
+            descripcion=descripcion,
+        )
+        if page_id:
+            async with await get_db() as db2:
+                await db2.execute(
+                    "INSERT OR REPLACE INTO notion_pages (entidad_tipo, entidad_id, page_id) VALUES ('evento',?,?)",
+                    (evento_id, page_id)
+                )
+                await db2.commit()
 
         embed = discord.Embed(
             title=f"📅 {nombre}",

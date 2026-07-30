@@ -2,6 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from database import get_db
+import notion_sync
 
 # ─────────────────────────────────────────────────────────
 #  FLUJOS PREDEFINIDOS del organigrama de GDD
@@ -170,6 +171,22 @@ class Flujos(commands.Cog):
         embed.set_footer(text="Cada paso se activa automáticamente al completar el anterior ✅")
 
         await interaction.response.send_message(embed=embed)
+
+        # ── Sync a Notion ──
+        pasos_nombres = [p["nombre"] for p in plantilla["pasos"]]
+        page_id = await notion_sync.crear_flujo_notion(
+            flujo_id=flujo_id,
+            nombre=plantilla["nombre"] + (f" — {contexto}" if contexto else ""),
+            area=plantilla["area"],
+            pasos=pasos_nombres,
+        )
+        if page_id:
+            async with await get_db() as db2:
+                await db2.execute(
+                    "INSERT OR REPLACE INTO notion_pages (entidad_tipo, entidad_id, page_id) VALUES ('flujo',?,?)",
+                    (flujo_id, page_id)
+                )
+                await db2.commit()
 
         # DM al responsable
         try:

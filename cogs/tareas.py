@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 from datetime import datetime
 from database import get_db
+import notion_sync
 
 AREAS = ["Logística", "Comunicaciones", "Pedagogía", "Relaciones Externas", "Tesorería"]
 
@@ -89,6 +90,24 @@ class Tareas(commands.Cog):
                     (tarea_id, depende_de)
                 )
             await db.commit()
+
+        # ── Sync a Notion (no bloquea si falla) ──
+        page_id = await notion_sync.crear_tarea_notion(
+            tarea_id=tarea_id,
+            nombre=nombre,
+            area=area,
+            responsable_nombre=responsable.display_name,
+            estado=estado_inicial,
+            deadline=deadline,
+            descripcion=descripcion,
+        )
+        if page_id:
+            async with await get_db() as db2:
+                await db2.execute(
+                    "INSERT OR REPLACE INTO notion_pages (entidad_tipo, entidad_id, page_id) VALUES ('tarea',?,?)",
+                    (tarea_id, page_id)
+                )
+                await db2.commit()
 
         embed = discord.Embed(
             title=f"{ESTADO_EMOJI[estado_inicial]} Tarea #{tarea_id} creada",
@@ -229,6 +248,15 @@ class Tareas(commands.Cog):
 
             await db.commit()
 
+        # ── Sync a Notion ──
+        async with await get_db() as db2:
+            async with db2.execute(
+                "SELECT page_id FROM notion_pages WHERE entidad_tipo='tarea' AND entidad_id=?", (tarea_id,)
+            ) as cur:
+                row = await cur.fetchone()
+        if row:
+            await notion_sync.actualizar_estado_notion(row[0], "completada")
+
         # Construir respuesta
         embed = discord.Embed(
             title=f"✅ Tarea #{tarea_id} completada",
@@ -352,6 +380,20 @@ class Tareas(commands.Cog):
         if not cambios:
             await interaction.response.send_message("ℹ️ No se realizaron cambios.", ephemeral=True)
             return
+
+        # ── Sync a Notion ──
+        async with await get_db() as db2:
+            async with db2.execute(
+                "SELECT page_id FROM notion_pages WHERE entidad_tipo='tarea' AND entidad_id=?", (tarea_id,)
+            ) as cur:
+                row = await cur.fetchone()
+        if row:
+            await notion_sync.actualizar_tarea_notion(
+                page_id=row[0],
+                responsable_nombre=responsable.display_name if responsable else None,
+                deadline=deadline,
+                estado=estado,
+            )
 
         embed = discord.Embed(
             title=f"✏️ Tarea #{tarea_id} actualizada",

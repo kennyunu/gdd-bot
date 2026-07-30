@@ -16,6 +16,7 @@ COGS = [
     "cogs.flujos",
     "cogs.recordatorios",  # F2 — deadlines diarios
     "cogs.reuniones",      # F2 — agendamiento colectivo
+    "cogs.notion",         # F3 — configuración y diagnóstico Notion
 ]
 
 @bot.event
