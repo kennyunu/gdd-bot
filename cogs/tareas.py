@@ -125,6 +125,11 @@ class Tareas(commands.Cog):
 
         await interaction.response.send_message(embed=embed)
 
+        # ── Actualizar tablero público ──
+        cog = self.bot.get_cog("ProyectosPublicos")
+        if cog:
+            await cog.trigger_update(interaction.guild)
+
         # Notificar al responsable por DM
         try:
             dm_msg = (
@@ -273,6 +278,11 @@ class Tareas(commands.Cog):
             )
 
         await interaction.response.send_message(embed=embed)
+
+        # ── Actualizar tablero público ──
+        cog = self.bot.get_cog("ProyectosPublicos")
+        if cog:
+            await cog.trigger_update(interaction.guild)
 
         # Notificar a los responsables de tareas desbloqueadas
         for dt in desbloqueadas:

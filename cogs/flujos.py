@@ -188,6 +188,11 @@ class Flujos(commands.Cog):
                 )
                 await db2.commit()
 
+        # ── Actualizar tablero público ──
+        cog = self.bot.get_cog("ProyectosPublicos")
+        if cog:
+            await cog.trigger_update(interaction.guild)
+
         # DM al responsable
         try:
             await responsable.send(
